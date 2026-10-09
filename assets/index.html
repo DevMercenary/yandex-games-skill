@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <!-- Без масштабирования: иначе на мобильных появится системный скролл/зум (п. 1.10.2) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>GAME_TITLE</title>
+    <style>
+        /* Требования 1.6.1.8 / 1.6.2.7 (нет выделения и контекстного меню),
+           1.10.2 (нет браузерного скролла и swipe-to-refresh), 1.6.1.1 (полный экран) */
+        html, body {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden;
+            overscroll-behavior: none;
+            background: #000;
+            -webkit-user-select: none; user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
+        }
+        #game { position: fixed; inset: 0; width: 100%; height: 100%; }
+        canvas { display: block; width: 100%; height: 100%; }
+    </style>
+    <!-- Yandex Games SDK: ТОЛЬКО относительный путь, файл sdk.js в архив не кладут -->
+    <script async src="/sdk.js" onload="initSDK()"></script>
+</head>
+<body oncontextmenu="return false">
+    <div id="game"><canvas id="canvas"></canvas></div>
+
+    <script src="yg.js"></script>
+    <script src="audio.js"></script>
+    <script src="game.js"></script>
+    <script>
+        // Точка входа. YaGames доступен только после загрузки /sdk.js (onload выше).
+        async function initSDK() {
+            const { lang } = await YG.init({
+                supportedLangs: ['ru', 'en'],        // языки, на которые переведена игра
+                onPause: () => Game.pause(),         // стоп звука и геймплея (п. 1.3, 4.7)
+                onResume: () => Game.resume()
+            });
+            Game.setLanguage(lang);                  // п. 2.14 — до первого экрана
+            const saved = await YG.load();           // облако + localStorage
+            await Game.boot(saved);                  // загрузка ассетов, построение первого экрана
+            YG.ready();                              // п. 1.19.2 — в момент реальной готовности
+        }
+    </script>
+</body>
+</html>
