@@ -91,7 +91,7 @@ Prod-режим: игра открывается на yandex.ru/games с реа�
 python scripts/check_build.py ./build --zip game.zip
 ```
 
-Скрипт валит сборку при отсутствии `index.html`, `/sdk.js`, `YaGames.init`, `LoadingAPI.ready`, `i18n.lang`, при пробелах/кириллице в именах, > 100 МБ, YouTube, `setInterval(showFullscreenAdv)`, rewarded без `onRewarded`; предупреждает про `<audio>`, внешние ссылки, `localStorage` без облака. `--selftest` проверяет сам скрипт.
+Скрипт валит сборку при отсутствии `index.html`, `/sdk.js`, `YaGames.init`, `LoadingAPI.ready`, `i18n.lang`, при пробелах/кириллице в именах, > 100 МБ, YouTube, `setInterval(showFullscreenAdv)`, rewarded без `onRewarded`; предупреждает про `<audio>`, внешние ссылки, `localStorage` без облака, тег SDK раньше объявления `initSDK`. Для билдов движков (Unity `.br/.gz/.wasm`) проверки по тексту JS пропускаются — вызовы SDK подтверждай на debug-панели. `--selftest` проверяет сам скрипт.
 
 ### 5. Заполни черновик в Консоли
 

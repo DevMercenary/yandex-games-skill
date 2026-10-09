@@ -58,9 +58,12 @@ def check(build_dir):
 
     total = 0
     sources = []
+    engine_build = False  # Unity/Godot и т. п.: JS лежит в .br/.gz/.wasm, по тексту не проверить
     for path in iter_files(build_dir):
         rel = os.path.relpath(path, build_dir).replace(os.sep, '/')
         total += os.path.getsize(path)
+        if rel.lower().endswith(('.js.br', '.js.gz', '.wasm', '.wasm.br', '.wasm.gz', '.data', '.data.br', '.pck')):
+            engine_build = True
         if ' ' in rel:
             errors.append(f'пробел в имени: {rel} (п. 1.22)')
         if re.search(r'[^\x00-\x7f]', rel):
@@ -106,9 +109,13 @@ def check(build_dir):
         return re.sub(r'(?m)^\s*//.*$', '', src)
     sources = [(rel, strip_comments(s)) for rel, s in sources]
     all_src = '\n'.join(s[1] for s in sources)
+    if engine_build:
+        infos.append('билд движка (сжатые .br/.gz/.wasm): вызовы SDK внутри не проверяются — подтвердите Game Ready, 文 и ▶️ на debug-панели')
     for rx, level, msg, must in CHECKS:
         found = re.search(rx, all_src, re.I)
         if must and not found:
+            if engine_build:
+                continue
             {'ERROR': errors, 'WARN': warns, 'INFO': infos}[level].append(msg)
         elif not must and found:
             where = next(rel for rel, s in sources if re.search(rx, s, re.I))
