@@ -12,6 +12,7 @@ description: Use when building, integrating, testing, packaging or publishing an
 | Файл | Когда читать |
 |---|---|
 | `references/sdk-api.md` | любой вызов `ysdk.*`: точные сигнатуры, лимиты, callback-и, коды ошибок |
+| `references/requirements-list.md` | полный нумерованный список «Требований к игре» (1.x–8.x) — чтобы ссылаться на пункты и ничего не пропустить |
 | `references/requirements-details.md` | что именно проверяет модератор по пунктам (звук, плеер, сохранения, реклама, ТВ, язык, промо) |
 | `references/console-publishing.md` | аккаунт, договор, поля черновика с лимитами, модерация, обновления, языки/домены, покупки в Консоли |
 | `references/testing-debug.md` | sdk-dev-proxy (dev/prod), режим черновика, debug-панель, Performance |
@@ -127,8 +128,8 @@ python scripts/check_build.py ./build --zip game.zip
 | `ysdk.getLeaderboards()`, `player.getID()`, `getMode()` | `ysdk.leaderboards.*`, `player.getUniqueID()`, `player.isAuthorized()` |
 | ссылка «Другие игры» на yandex.ru/games/developer/… | `ysdk.features.GamesAPI.getAllGames()` |
 | `score` в лидерборд типа `time` в секундах | миллисекунды |
-| Unity: Compression Brotli/Gzip без decompression fallback, шаблон Default | см. `references/engine-unity.md` (официальный плагин, шаблон, настройки) |
+| Unity: ищешь «официальный пакет Яндекса» | его нет — Яндекс документирует Plugin Your Games 2.0 (`YG2`); настройки билда и API в `references/engine-unity.md` |
 
 ## Если игра на движке
 
-Прочитай целиком свой `references/engine-*.md` **до** правок: там точные имена плагина и методов (Unity — пакет из официального репозитория, свой WebGL-шаблон; Construct 3 — аддон и события; Defold — расширение и `yagames.*`; Cocos — модуль `ysdk`). Общие требования (пункты выше) действуют для всех движков; `check_build.py` запускай на экспортированной папке.
+Прочитай целиком свой `references/engine-*.md` **до** правок: там точные имена плагина и методов (Unity — официальные страницы Яндекса ведут на сторонний Plugin Your Games 2.0 с классом `YG2`, свой WebGL-шаблон и настройки сжатия; Construct 3 — аддон `YandexGamesSDK` с действиями/условиями; Defold — расширение `ysdk.*` в snake_case; Cocos Creator — расширение, генерация шаблонов и `import { ysdk } from 'db://yandex-games-sdk/ysdk'`). Общие требования (пункты выше) действуют для всех движков; `check_build.py` запускай на экспортированной папке.

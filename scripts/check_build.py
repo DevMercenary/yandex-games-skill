@@ -93,6 +93,11 @@ def check(build_dir):
         if not re.search(r'<meta[^>]+name=["\']viewport["\']', src, re.I):
             warns.append('index.html: нет <meta name="viewport"> — на мобильных будет зум и скролл (п. 1.10.2)')
 
+    def strip_comments(src):  # комментарии не считаем: иначе ложные срабатывания на пояснениях
+        src = re.sub(r'<!--[\s\S]*?-->', '', src)
+        src = re.sub(r'/\*[\s\S]*?\*/', '', src)
+        return re.sub(r'(?m)^\s*//.*$', '', src)
+    sources = [(rel, strip_comments(s)) for rel, s in sources]
     all_src = '\n'.join(s[1] for s in sources)
     for rx, level, msg, must in CHECKS:
         found = re.search(rx, all_src, re.I)
