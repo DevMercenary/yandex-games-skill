@@ -23,8 +23,6 @@
         #game { position: fixed; inset: 0; width: 100%; height: 100%; }
         canvas { display: block; width: 100%; height: 100%; }
     </style>
-    <!-- Yandex Games SDK: ТОЛЬКО относительный путь, файл sdk.js в архив не кладут -->
-    <script async src="/sdk.js" onload="initSDK()"></script>
 </head>
 <body oncontextmenu="return false">
     <div id="game"><canvas id="canvas"></canvas></div>
@@ -33,12 +31,13 @@
     <script src="audio.js"></script>
     <script src="game.js"></script>
     <script>
-        // Точка входа. YaGames доступен только после загрузки /sdk.js (onload выше).
+        // Точка входа. Вызывается из onload тега SDK ниже — к этому моменту все скрипты игры уже определены.
         async function initSDK() {
             const { lang } = await YG.init({
                 supportedLangs: ['ru', 'en'],        // языки, на которые переведена игра
                 onPause: () => Game.pause(),         // стоп звука и геймплея (п. 1.3, 4.7)
-                onResume: () => Game.resume()
+                onResume: () => Game.resume(),
+                onAccountChanged: () => location.reload() // игрок выбрал другой прогресс после входа
             });
             Game.setLanguage(lang);                  // п. 2.14 — до первого экрана
             const saved = await YG.load();           // облако + localStorage
@@ -46,5 +45,9 @@
             YG.ready();                              // п. 1.19.2 — в момент реальной готовности
         }
     </script>
+    <!-- Yandex Games SDK: ТОЛЬКО относительный путь, файл sdk.js в архив не кладут.
+         Тег стоит последним, чтобы onload не сработал раньше объявления initSDK (кешированный sdk.js).
+         onerror — запуск без SDK при открытии index.html напрямую; на платформе не срабатывает. -->
+    <script async src="/sdk.js" onload="initSDK()" onerror="console.warn('sdk.js не загружен — запуск без SDK'); initSDK()"></script>
 </body>
 </html>

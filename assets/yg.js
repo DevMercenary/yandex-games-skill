@@ -4,7 +4,7 @@ window.YG = (() => {
     let ysdk = null;
     let player = null;
     let lang = 'en';
-    let hooks = { onPause: () => {}, onResume: () => {} };
+    let hooks = { onPause: () => {}, onResume: () => {}, onAccountChanged: null };
     let pausedByPlatform = false;
     let gameplayActive = false;
     const STORAGE_KEY = 'yg_save';
@@ -16,8 +16,8 @@ window.YG = (() => {
         return supported.includes('en') ? 'en' : supported[0];
     }
 
-    async function init({ supportedLangs = ['en'], onPause, onResume, signed = false } = {}) {
-        hooks = { onPause: onPause || hooks.onPause, onResume: onResume || hooks.onResume };
+    async function init({ supportedLangs = ['en'], onPause, onResume, onAccountChanged, signed = false } = {}) {
+        hooks = { onPause: onPause || hooks.onPause, onResume: onResume || hooks.onResume, onAccountChanged: onAccountChanged || null };
         if (typeof YaGames === 'undefined') {
             console.warn('[YG] YaGames is not defined — running without SDK');
             lang = pickLang((navigator.language || 'en').slice(0, 2), supportedLangs);
@@ -31,6 +31,13 @@ window.YG = (() => {
         ysdk.on('game_api_resume', () => { pausedByPlatform = false; hooks.onResume(); });
 
         try { player = await ysdk.getPlayer(); } catch (e) { player = null; }
+
+        // Гость поиграл, потом вошёл: платформа покажет диалог выбора прогресса.
+        // После закрытия нужно заново получить игрока и данные (перезагрузка — самый простой вариант).
+        ysdk.on(ysdk.EVENTS.ACCOUNT_SELECTION_DIALOG_CLOSED, async () => {
+            try { player = await ysdk.getPlayer(); } catch (e) { player = null; }
+            if (hooks.onAccountChanged) hooks.onAccountChanged();
+        });
         return { ysdk, lang, player };
     }
 

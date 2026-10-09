@@ -28,6 +28,7 @@ CHECKS = [
     (r'LoadingAPI\??\.ready\(', 'ERROR', 'нет LoadingAPI.ready() — Game Ready обязателен (п. 1.19.2)', True),
     (r'i18n\??\.lang', 'ERROR', 'нет ysdk.environment.i18n.lang — автоопределение языка обязательно (п. 2.14)', True),
     (r'game_api_pause', 'WARN', 'нет подписки на game_api_pause — звук/геймплей не встанут на паузу при рекламе и потере фокуса (п. 1.3, 4.7)', True),
+    (r'GameplayAPI\??\.start\(', 'WARN', 'нет GameplayAPI.start()/stop() — разметка геймплея не обязательна, но улучшает рекомендации; если есть — её проверяют (п. 1.19.3)', True),
     (r'<audio[\s>]|<video[\s>]|new\s+Audio\(', 'WARN', '<audio>/<video>/new Audio() вызывают системный плеер браузера — используйте Web Audio API (п. 1.6.1.6)', False),
     (r'youtube\.com|youtu\.be', 'ERROR', 'интеграция YouTube запрещена (п. 3.9)', False),
     (r'https?://[a-z0-9.-]*s3\.yandex\.net/(?!sdk\.js)', 'WARN', 'абсолютные URL на S3 Яндекса запрещены (п. 1.7)', False),
@@ -92,6 +93,12 @@ def check(build_dir):
             errors.append('index.html: нет <script src="/sdk.js"> (п. 1.1)')
         if not re.search(r'<meta[^>]+name=["\']viewport["\']', src, re.I):
             warns.append('index.html: нет <meta name="viewport"> — на мобильных будет зум и скролл (п. 1.10.2)')
+        tag = re.search(r'<script[^>]+src=["\']/sdk\.js["\'][^>]*onload=["\'](\w+)', src)
+        if tag:
+            decl = re.search(r'function\s+' + tag.group(1) + r'\b|(const|let|var)\s+' + tag.group(1) + r'\b', src)
+            if decl and decl.start() > tag.start():
+                warns.append(f'index.html: тег /sdk.js с onload="{tag.group(1)}()" стоит раньше объявления {tag.group(1)} — '
+                             'кешированный sdk.js вызовет ReferenceError; перенесите тег SDK в конец <body>')
 
     def strip_comments(src):  # комментарии не считаем: иначе ложные срабатывания на пояснениях
         src = re.sub(r'<!--[\s\S]*?-->', '', src)
