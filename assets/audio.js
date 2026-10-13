@@ -33,9 +33,10 @@ window.GameAudio = (() => {
     function stopMusic() { if (music) { try { music.stop(); } catch (e) {} music = null; } }
     // Для game_api_pause / game_api_resume: suspend/resume останавливает ВСЁ (п. 1.3, 4.7)
     function pause() { if (ctx && ctx.state === 'running') ctx.suspend(); }
-    function resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); }
+    // !== 'running', а не === 'suspended': iOS Safari после звонка/сворачивания ставит 'interrupted'
+    function resume() { if (ctx && ctx.state !== 'running') ctx.resume(); }
     // Вызывать по первому клику/тапу: браузеры стартуют AudioContext только после жеста пользователя
-    function unlock() { if (ensure().state === 'suspended') ctx.resume(); }
+    function unlock() { if (ensure().state !== 'running') ctx.resume(); }
     function setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 1; }
 
     return { load, play, playMusic, stopMusic, pause, resume, unlock, setMuted, get ctx() { return ctx; } };

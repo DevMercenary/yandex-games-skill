@@ -130,8 +130,11 @@ def check(build_dir):
 
 def make_zip(build_dir, out):
     build_dir = os.path.abspath(build_dir)
+    out = os.path.abspath(out)
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
         for path in iter_files(build_dir):
+            if path == out:  # архив лежит внутри билда — себя не упаковываем
+                continue
             z.write(path, os.path.relpath(path, build_dir).replace(os.sep, '/'))
     return os.path.getsize(out)
 
@@ -155,6 +158,12 @@ def selftest():
         assert not e, e
         out = os.path.join(d, 'g.zip'); make_zip(good, out)
         assert zipfile.ZipFile(out).namelist() == ['index.html']
+
+        assert main([good, '--zip']) == 2, '--zip без имени файла должен давать код 2, а не падать'
+        inside = os.path.join(good, 'g.zip')  # архив внутри билда не должен упаковывать сам себя
+        for _ in range(2):                    # второй прогон — поверх уже существующего архива
+            make_zip(good, inside)
+            assert zipfile.ZipFile(inside).namelist() == ['index.html'], zipfile.ZipFile(inside).namelist()
     print('selftest ok')
 
 
@@ -164,6 +173,8 @@ def main(argv):
     if not argv or argv[0].startswith('-'):
         print(__doc__); return 2
     build_dir = argv[0]
+    if '--zip' in argv and argv.index('--zip') + 1 >= len(argv):
+        print('после --zip нужно имя архива: check_build.py <build_dir> --zip game.zip'); return 2
     errors, warns, infos = check(build_dir)
     for x in infos: print('INFO ', x)
     for x in warns: print('WARN ', x)

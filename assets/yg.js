@@ -47,6 +47,10 @@ window.YG = (() => {
     function gameplayStop() { if (gameplayActive) { gameplayActive = false; ysdk?.features?.GameplayAPI?.stop(); } }
 
     // ---- Реклама (п. 4.x). Вызывать только в логической паузе, после действия игрока ----
+    // Реклама закрылась, а платформа ещё держит паузу (вкладку свернули во время ролика) —
+    // не возобновляем: это сделает game_api_resume, иначе звук заиграет в фоне (п. 1.3).
+    function resumeAfterAd() { if (!pausedByPlatform) hooks.onResume(); }
+
     function showInterstitial() {
         return new Promise((resolve) => {
             if (!ysdk) return resolve(false);
@@ -54,8 +58,8 @@ window.YG = (() => {
             ysdk.adv.showFullscreenAdv({
                 callbacks: {
                     onOpen: () => hooks.onPause(),
-                    onClose: (wasShown) => { hooks.onResume(); resolve(!!wasShown); },
-                    onError: () => { hooks.onResume(); resolve(false); }
+                    onClose: (wasShown) => { resumeAfterAd(); resolve(!!wasShown); },
+                    onError: () => { resumeAfterAd(); resolve(false); }
                 }
             });
         });
@@ -70,17 +74,20 @@ window.YG = (() => {
                 callbacks: {
                     onOpen: () => hooks.onPause(),
                     onRewarded: () => { rewarded = true; },           // награда ТОЛЬКО здесь
-                    onClose: () => { hooks.onResume(); resolve(rewarded); },
-                    onError: () => { hooks.onResume(); resolve(false); }
+                    onClose: () => { resumeAfterAd(); resolve(rewarded); },
+                    onError: () => { resumeAfterAd(); resolve(false); }
                 }
             });
         });
     }
 
     // ---- Сохранения (п. 1.9): облако + localStorage, сразу после действия игрока ----
+    // В сохранение добавляются служебные поля: _t — время (серверное, если есть), _u — чей это localStorage.
+    function uid() { try { return player?.getUniqueID?.() ?? null; } catch (e) { return null; } }
     async function save(data) {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
-        if (player) { try { await player.setData(data); } catch (e) { console.warn('[YG] setData', e); } }
+        const stamped = { ...data, _t: ysdk?.serverTime?.() ?? Date.now() };
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...stamped, _u: uid() })); } catch (e) {}
+        if (player) { try { await player.setData(stamped); } catch (e) { console.warn('[YG] setData', e); } }
     }
     async function load() {
         let local = null;
@@ -88,7 +95,10 @@ window.YG = (() => {
         if (!player) return local;
         try {
             const cloud = await player.getData();
-            if (cloud && Object.keys(cloud).length) return cloud;
+            // setData без flush уходит очередью: при F5 сразу после действия облако может отстать от localStorage.
+            // Локальная копия побеждает, только если она новее и записана этим же игроком.
+            const localIsNewer = local && local._u === uid() && (local._t || 0) > (cloud?._t || 0);
+            if (cloud && Object.keys(cloud).length && !localIsNewer) return cloud;
         } catch (e) { console.warn('[YG] getData', e); }
         return local;
     }
@@ -96,13 +106,15 @@ window.YG = (() => {
     // ---- Покупки (п. 1.13.1): консумировать необработанные на каждом запуске ----
     async function consumePending(apply /* async (productID) => void */) {
         if (!ysdk) return;
-        try {
-            const purchases = await ysdk.payments.getPurchases();
-            for (const p of purchases) {
+        let purchases;
+        try { purchases = await ysdk.payments.getPurchases(); }
+        catch (e) { console.warn('[YG] getPurchases', e); return; }  // покупки не подключены или недоступны
+        for (const p of purchases) {
+            try {
                 await apply(p.productID);                          // сначала начислить
                 await ysdk.payments.consumePurchase(p.purchaseToken); // потом консумировать
-            }
-        } catch (e) { /* покупки не подключены или недоступны */ }
+            } catch (e) { console.warn('[YG] покупка не обработана, повтор при следующем запуске:', p.productID, e); }
+        }
     }
     async function buy(id, apply) {
         if (!ysdk) return false;
